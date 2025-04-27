@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#a3d5ff">
+  <link rel="manifest" href="manifest.json">
+  <title>Baby Tracker</title>
+  <script defer src="app.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .page {
+      transition: transform 0.5s ease-in-out;
+      min-width: 100%;
+    }
+    .pages-container {
+      display: flex;
+      width: 200%;
+    }
+  </style>
+</head>
+<body class="bg-blue-50 min-h-screen flex flex-col overflow-hidden">
+
+  <!-- Pagine -->
+  <main class="flex-1 overflow-hidden relative">
+    <div id="pages" class="pages-container">
+
+      <!-- Inserisci -->
+      <section id="pagina-inserisci" class="page p-4">
+        <div class="flex flex-col space-y-6">
+          <button onclick="salvaEvento('poppata')" class="bg-blue-500 text-white py-6 rounded-2xl text-2xl shadow-md">Poppata</button>
+          <button onclick="salvaEvento('ninna')" class="bg-purple-500 text-white py-6 rounded-2xl text-2xl shadow-md">Ninna</button>
+          <div class="text-gray-500 text-center text-sm mt-4">
+            Poppate oggi: <span id="contatorePoppata">0</span> | Ninne oggi: <span id="contatoreNinna">0</span>
+          </div>
+          <div id="feedback" class="text-green-600 text-center mt-4"></div>
+        </div>
+      </section>
+
+      <!-- Revisione -->
+      <section id="pagina-revisione" class="page p-4">
+        <div class="flex justify-between items-center mb-4">
+          <input type="date" id="filtroData" class="border p-2 rounded" onchange="mostraEventi()">
+          <button onclick="resetStorico()" class="bg-red-400 text-white p-2 rounded">Reset Storico</button>
+        </div>
+        <table class="w-full table-auto mt-4 text-center">
+          <thead>
+            <tr>
+              <th class="border px-2 py-2">Tipo</th>
+              <th class="border px-2 py-2">Data</th>
+              <th class="border px-2 py-2">Ora</th>
+              <th class="border px-2 py-2">Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="tabellaEventi"></tbody>
+        </table>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Barra navigazione -->
+  <nav class="flex justify-around bg-white shadow-inner p-2">
+    <button onclick="switchPage(0)" id="btnInserisci" class="flex-1 py-2 text-lg font-semibold text-blue-600">Inserisci</button>
+    <button onclick="switchPage(1)" id="btnRevisione" class="flex-1 py-2 text-lg font-semibold text-gray-600">Revisione</button>
+  </nav>
+
+<script>
+  let currentPage = 0;
+  const pages = document.getElementById('pages');
+
+  function getEventi() {
+    try {
+      return JSON.parse(localStorage.getItem('eventiBimbo')) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  function setEventi(eventi) {
+    localStorage.setItem('eventiBimbo', JSON.stringify(eventi));
+  }
+
+  function switchPage(index) {
+    currentPage = index;
+    pages.style.transform = `translateX(-${index * 100}%)`;
+    document.getElementById('btnInserisci').classList.toggle('text-blue-600', index === 0);
+    document.getElementById('btnInserisci').classList.toggle('text-gray-600', index !== 0);
+    document.getElementById('btnRevisione').classList.toggle('text-blue-600', index === 1);
+    document.getElementById('btnRevisione').classList.toggle('text-gray-600', index !== 1);
+    if (index === 1) mostraEventi();
+  }
+
+  function salvaEvento(tipo) {
+    const eventi = getEventi();
+    eventi.push({ tipo, data: new Date().toISOString() });
+    setEventi(eventi);
+    aggiornaContatori();
+    document.getElementById('feedback').textContent = `Evento "${tipo}" salvato!`;
+    setTimeout(() => document.getElementById('feedback').textContent = '', 2000);
+  }
+
+  function aggiornaContatori() {
+    const eventi = getEventi();
+    const oggi = new Date().toISOString().split('T')[0];
+    let poppate = 0, ninne = 0;
+    eventi.forEach(ev => {
+      if (ev.data.startsWith(oggi)) {
+        if (ev.tipo === 'poppata') poppate++;
+        if (ev.tipo === 'ninna') ninne++;
+      }
+    });
+    document.getElementById('contatorePoppata').textContent = poppate;
+    document.getElementById('contatoreNinna').textContent = ninne;
+  }
+
+  function mostraEventi() {
+    const eventi = getEventi();
+    const filtro = document.getElementById('filtroData').value;
+    const tabella = document.getElementById('tabellaEventi');
+    tabella.innerHTML = '';
+    eventi
+      .filter(ev => !filtro || ev.data.startsWith(filtro))
+      .sort((a, b) => new Date(b.data) - new Date(a.data))
+      .forEach((ev, index) => {
+        const tr = document.createElement('tr');
+        const data = new Date(ev.data);
+        tr.innerHTML = `
+          <td class="border px-2 py-2">${ev.tipo}</td>
+          <td class="border px-2 py-2">${data.toLocaleDateString()}</td>
+          <td class="border px-2 py-2">${data.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+          <td class="border px-2 py-2">
+            <button onclick="eliminaEvento(${index})" class="text-red-500">Elimina</button>
+          </td>
+        `;
+        tabella.appendChild(tr);
+      });
+  }
+
+  function eliminaEvento(index) {
+    if (confirm('Sei sicuro di voler eliminare questo evento?')) {
+      const eventi = getEventi();
+      eventi.splice(index, 1);
+      setEventi(eventi);
+      mostraEventi();
+      aggiornaContatori();
+    }
+  }
+
+  function resetStorico() {
+    if (confirm('Sei sicuro di voler cancellare tutto lo storico?')) {
+      localStorage.removeItem('eventiBimbo');
+      mostraEventi();
+      aggiornaContatori();
+    }
+  }
+
+  aggiornaContatori();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+  }
+</script>
+
+</body>
+</html>
