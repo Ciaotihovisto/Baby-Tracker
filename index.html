@@ -154,6 +154,41 @@
     .then(reg => console.log('Service worker registrato!', reg))
     .catch(err => console.error('Errore nel registrare il service worker', err));
 }
+    let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); // Blocca il prompt automatico
+  deferredPrompt = e; // Salva l'evento
+
+  // Mostra il pulsante personalizzato
+  const installBtn = document.getElementById('btnInstall');
+  if (installBtn) {
+    installBtn.classList.remove('hidden');
+  }
+});
+
+function installApp() {
+  const installBtn = document.getElementById('btnInstall');
+
+  if (deferredPrompt) {
+    deferredPrompt.prompt(); // Mostra il popup nativo
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('✅ Installazione accettata');
+      } else {
+        console.log('❌ Installazione rifiutata');
+      }
+      deferredPrompt = null; // Reset
+      if (installBtn) {
+        installBtn.classList.add('hidden'); // Nascondi il bottone dopo
+      }
+    });
+  }
+}
   </script>
+  <!-- Pulsante Installazione -->
+<button id="btnInstall" onclick="installApp()" class="hidden fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-2xl shadow-lg z-50">
+  Installa App
+</button>
 </body>
 </html>
