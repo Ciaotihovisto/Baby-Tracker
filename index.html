@@ -9,20 +9,19 @@
   <title>Baby Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 16px); /* spazio automatico */
-  }
-</style>
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+  </style>
 </head>
 <body class="flex flex-col min-h-screen bg-blue-50">
 
-  <!-- Contenuto principale -->
   <main class="flex-1 relative overflow-hidden">
-    
+
     <!-- Pagina Inserisci -->
-    <section id="pagina-inserisci" class="absolute inset-0 p-4 flex flex-col space-y-6 transition-all duration-500">
-      <button onclick="salvaEvento('poppata')" class="bg-blue-500 text-white py-6 rounded-2xl text-2xl shadow-md">Poppata</button>
-      <button onclick="salvaEvento('ninna')" class="bg-purple-500 text-white py-6 rounded-2xl text-2xl shadow-md">Ninna</button>
+    <section id="pagina-inserisci" class="absolute inset-0 flex flex-col justify-center items-center space-y-6 p-4 transition-all duration-500">
+      <button onclick="salvaEvento('poppata')" class="bg-blue-500 text-white py-6 px-12 rounded-2xl text-2xl shadow-md">Poppata</button>
+      <button onclick="salvaEvento('ninna')" class="bg-purple-500 text-white py-6 px-12 rounded-2xl text-2xl shadow-md">Ninna</button>
       <div class="text-gray-500 text-center text-sm mt-4">
         Poppate oggi: <span id="contatorePoppata">0</span> | Ninne oggi: <span id="contatoreNinna">0</span>
       </div>
@@ -30,7 +29,7 @@
     </section>
 
     <!-- Pagina Revisione -->
-    <section id="pagina-revisione" class="absolute inset-0 p-4 hidden flex flex-col transition-all duration-500 bg-blue-50">
+    <section id="pagina-revisione" class="absolute inset-0 hidden flex flex-col p-4 transition-all duration-500 bg-blue-50 overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <input type="date" id="filtroData" class="border p-2 rounded" onchange="mostraEventi()">
         <button onclick="resetStorico()" class="bg-red-400 text-white p-2 rounded">Reset Storico</button>
@@ -50,14 +49,37 @@
 
   </main>
 
-  <!-- Barra di navigazione -->
-  <nav class="flex justify-around bg-white shadow-inner p-2 pb-safe bottom-0 w-full z-40">
-  <button onclick="switchPage(0)" id="btnInserisci" class="flex-1 py-2 text-lg font-semibold text-blue-600">Inserisci</button>
-  <button onclick="switchPage(1)" id="btnRevisione" class="flex-1 py-2 text-lg font-semibold text-gray-600">Revisione</button>
-</nav>
-  
+  <!-- Barra navigazione fissa -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white shadow-inner flex justify-around p-2 pb-safe z-50">
+    <button onclick="switchPage(0)" id="btnInserisci" class="flex-1 py-2 text-lg font-semibold text-blue-600">Inserisci</button>
+    <button onclick="switchPage(1)" id="btnRevisione" class="flex-1 py-2 text-lg font-semibold text-gray-600">Revisione</button>
+  </nav>
+
+  <!-- Pulsante installazione App -->
+  <button id="btnInstall" onclick="installApp()" class="hidden fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-2xl shadow-lg z-50">
+    Installa App
+  </button>
+
   <!-- Script -->
   <script>
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('btnInstall').classList.remove('hidden');
+    });
+
+    function installApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          deferredPrompt = null;
+          document.getElementById('btnInstall').classList.add('hidden');
+        });
+      }
+    }
+
     function getEventi() {
       try {
         return JSON.parse(localStorage.getItem('eventiBimbo')) || [];
@@ -155,45 +177,9 @@
 
     aggiornaContatori();
     if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js')
-    .then(reg => console.log('Service worker registrato!', reg))
-    .catch(err => console.error('Errore nel registrare il service worker', err));
-}
-    let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault(); // Blocca il prompt automatico
-  deferredPrompt = e; // Salva l'evento
-
-  // Mostra il pulsante personalizzato
-  const installBtn = document.getElementById('btnInstall');
-  if (installBtn) {
-    installBtn.classList.remove('hidden');
-  }
-});
-
-function installApp() {
-  const installBtn = document.getElementById('btnInstall');
-
-  if (deferredPrompt) {
-    deferredPrompt.prompt(); // Mostra il popup nativo
-    deferredPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('✅ Installazione accettata');
-      } else {
-        console.log('❌ Installazione rifiutata');
-      }
-      deferredPrompt = null; // Reset
-      if (installBtn) {
-        installBtn.classList.add('hidden'); // Nascondi il bottone dopo
-      }
-    });
-  }
-}
+      navigator.serviceWorker.register('service-worker.js');
+    }
   </script>
-  <!-- Pulsante Installazione -->
-<button id="btnInstall" onclick="installApp()" class="hidden fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-2xl shadow-lg z-50">
-  Installa App
-</button>
+
 </body>
 </html>
