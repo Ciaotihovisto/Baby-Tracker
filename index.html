@@ -8,6 +8,11 @@
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <title>Baby Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px); /* spazio automatico */
+  }
+</style>
 </head>
 <body class="flex flex-col min-h-screen bg-blue-50">
 
@@ -46,11 +51,11 @@
   </main>
 
   <!-- Barra di navigazione -->
-  <nav class="flex justify-around bg-white shadow-inner p-2">
-    <button onclick="switchPage(0)" id="btnInserisci" class="flex-1 py-2 text-lg font-semibold text-blue-600">Inserisci</button>
-    <button onclick="switchPage(1)" id="btnRevisione" class="flex-1 py-2 text-lg font-semibold text-gray-600">Revisione</button>
-  </nav>
-
+  <nav class="flex justify-around bg-white shadow-inner p-2 pb-safe bottom-0 w-full z-40">
+  <button onclick="switchPage(0)" id="btnInserisci" class="flex-1 py-2 text-lg font-semibold text-blue-600">Inserisci</button>
+  <button onclick="switchPage(1)" id="btnRevisione" class="flex-1 py-2 text-lg font-semibold text-gray-600">Revisione</button>
+</nav>
+  
   <!-- Script -->
   <script>
     function getEventi() {
