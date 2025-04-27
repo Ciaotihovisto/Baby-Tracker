@@ -6,20 +6,28 @@
   <meta name="theme-color" content="#a3d5ff">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <title>Baby Tracker | By DF</title>
+  <title>Baby Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
     .pb-safe {
       padding-bottom: env(safe-area-inset-bottom, 16px);
     }
+    .fade {
+      transition: opacity 0.5s ease-in-out;
+    }
   </style>
 </head>
 <body class="flex flex-col min-h-screen bg-blue-50">
 
+  <!-- Preloader -->
+  <div id="preloader" class="fixed inset-0 bg-blue-100 flex items-center justify-center z-50">
+    <span class="text-2xl font-bold text-blue-500 animate-pulse">Caricamento...</span>
+  </div>
+
   <main class="flex-1 relative overflow-hidden">
 
     <!-- Pagina Inserisci -->
-    <section id="pagina-inserisci" class="absolute inset-0 flex flex-col justify-center items-center space-y-6 p-4 transition-all duration-500">
+    <section id="pagina-inserisci" class="absolute inset-0 flex flex-col justify-center items-center space-y-6 p-4 fade">
       <button onclick="salvaEvento('poppata')" class="bg-blue-500 text-white py-6 px-12 rounded-2xl text-2xl shadow-md">Poppata</button>
       <button onclick="salvaEvento('ninna')" class="bg-purple-500 text-white py-6 px-12 rounded-2xl text-2xl shadow-md">Ninna</button>
       <div class="text-gray-500 text-center text-sm mt-4">
@@ -29,7 +37,7 @@
     </section>
 
     <!-- Pagina Revisione -->
-    <section id="pagina-revisione" class="absolute inset-0 hidden flex flex-col p-4 transition-all duration-500 bg-blue-50 overflow-y-auto">
+    <section id="pagina-revisione" class="absolute inset-0 hidden flex flex-col p-4 bg-blue-50 overflow-y-auto fade">
       <div class="flex justify-between items-center mb-4">
         <input type="date" id="filtroData" class="border p-2 rounded" onchange="mostraEventi()">
         <button onclick="resetStorico()" class="bg-red-400 text-white p-2 rounded">Reset Storico</button>
@@ -64,16 +72,28 @@
   <script>
     let deferredPrompt;
 
+    window.addEventListener('load', () => {
+      document.getElementById('preloader').style.display = 'none';
+    });
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('btnInstall').classList.remove('hidden');
+      if (!localStorage.getItem('pwaPromptShown')) {
+        deferredPrompt = e;
+        document.getElementById('btnInstall').classList.remove('hidden');
+      }
     });
 
     function installApp() {
       if (deferredPrompt) {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('✅ Installazione accettata');
+          } else {
+            console.log('❌ Installazione rifiutata');
+          }
+          localStorage.setItem('pwaPromptShown', 'true');
           deferredPrompt = null;
           document.getElementById('btnInstall').classList.add('hidden');
         });
@@ -111,12 +131,16 @@
       document.getElementById('btnRevisione').classList.toggle('text-gray-600', index !== 1);
     }
 
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, (tag) => ({'&':'&amp;','<':'&lt;','>':'&gt;','\'':'&#39;','\"':'&quot;'}[tag]));
+    }
+
     function salvaEvento(tipo) {
       const eventi = getEventi();
-      eventi.push({ tipo, data: new Date().toISOString() });
+      eventi.push({ tipo: tipo, data: new Date().toISOString() });
       setEventi(eventi);
       aggiornaContatori();
-      document.getElementById('feedback').textContent = `Evento \"${tipo}\" salvato!`;
+      document.getElementById('feedback').textContent = `Evento "${tipo}" salvato!`;
       setTimeout(() => document.getElementById('feedback').textContent = '', 2000);
     }
 
@@ -135,26 +159,23 @@
     }
 
     function mostraEventi() {
-      const eventi = getEventi();
+      const eventi = getEventi().sort((a, b) => new Date(b.data) - new Date(a.data));
       const filtro = document.getElementById('filtroData').value;
       const tabella = document.getElementById('tabellaEventi');
       tabella.innerHTML = '';
-      eventi
-        .filter(ev => !filtro || ev.data.startsWith(filtro))
-        .sort((a, b) => new Date(b.data) - new Date(a.data))
-        .forEach((ev, index) => {
-          const data = new Date(ev.data);
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td class="border px-2 py-2">${ev.tipo}</td>
-            <td class="border px-2 py-2">${data.toLocaleDateString()}</td>
-            <td class="border px-2 py-2">${data.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-            <td class="border px-2 py-2">
-              <button onclick="eliminaEvento(${index})" class="text-red-500">Elimina</button>
-            </td>
-          `;
-          tabella.appendChild(tr);
-        });
+      eventi.filter(ev => !filtro || ev.data.startsWith(filtro)).forEach((ev, index) => {
+        const data = new Date(ev.data);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="border px-2 py-2">${escapeHTML(ev.tipo)}</td>
+          <td class="border px-2 py-2">${data.toLocaleDateString()}</td>
+          <td class="border px-2 py-2">${data.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+          <td class="border px-2 py-2">
+            <button onclick="eliminaEvento(${index})" class="text-red-500">Elimina</button>
+          </td>
+        `;
+        tabella.appendChild(tr);
+      });
     }
 
     function eliminaEvento(index) {
